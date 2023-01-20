@@ -51,8 +51,10 @@ auto main(string[] args) {
   const pid = getpid;
   info("running as pid: ", pid);
 
-  info("executing inittab: ", inittabPath);
-  inittab(inittabPath);
+  if(pid == 1) {
+    info("executing inittab: ", inittabPath);
+    inittab(inittabPath);
+  }
 
   return 0;
 }
