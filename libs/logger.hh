@@ -1,43 +1,29 @@
 #pragma once
 
-#include <algorithm>
-#include <cstdint>
-#include <cstdlib>
-#include <filesystem>
-#include <fstream>
+// https://github.com/yamader/mylib/tree/ec873be/cxx/logger.hh
+
+#include "nullstream.hh"
+
 #include <iostream>
-#include <ranges>
+#include <ostream>
 #include <sstream>
-#include <string>
-#include <string_view>
-#include <sys/types.h>
-#include <unistd.h>
 #include <utility>
-#include <vector>
 
-using namespace std::string_literals;
+//
+struct Context;
 
-inline std::string dinit_v_str{"0.1.0"s};
+namespace yamad {
 
-// Basic data structure
+using namespace std::literals;
 
-struct Context {
-  bool has_color;
-  bool debugging;
-};
+auto c_dim(Context& ctx, auto&& msg) -> decltype(msg + "") {
+  if(ctx.has_color) return "\e[1;30m" + msg + "\e[0m";
+  else              return msg;
+}
 
-// inittab
-
-auto inittab(Context& ctx) -> void;
-
-// Logger
-
-auto c_err(Context& ctx, std::string msg) {
-  if(ctx.has_color) {
-    return "\e[1;31m" + msg + "\e[0m";
-  } else {
-    return msg;
-  }
+auto c_err(Context& ctx, auto&& msg) -> decltype(msg + "") {
+  if(ctx.has_color) return "\e[1;31m" + msg + "\e[0m";
+  else              return msg;
 }
 
 class Logger {
@@ -46,7 +32,7 @@ class Logger {
 
  public:
   Logger(std::ostream& out): out{out} {
-    *this << "dinit: "s;
+    *this << "dinit: ";
   }
   ~Logger() { out << ss.str() << '\n'; }
 
@@ -112,13 +98,20 @@ class Debug {
   Logger logger;
 
  public:
-  Debug(Context& ctx): ctx{ctx}, logger{std::cout} {
-    if(ctx.debugging) *this << "debug: "s;
+  Debug(Context& ctx): ctx{ctx}, logger{init_logger(ctx)} {
+    *this << c_dim(ctx, "debug: "s);
+  }
+
+  auto init_logger(Context& ctx) -> Logger {
+    if(ctx.debugging) return {std::cout};
+    else              return {yamad::null_stream};
   }
 
   template<typename T>
   auto operator<<(T&& val) -> Debug& {
-    if(ctx.debugging) logger << std::forward<T>(val);
+    logger << std::forward<T>(val);
     return *this;
   }
 };
+
+}

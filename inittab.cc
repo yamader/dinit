@@ -1,29 +1,24 @@
-#include "dinit.hh"
-#include "ranges.hh"
-
-inline std::filesystem::path inittab_path{"/etc/inittab"s};
+#include "common.hh"
 
 auto inittab(Context& ctx) -> void {
-  if(!std::filesystem::exists(inittab_path)) {
-    Err(ctx) << "/etc/inittab: no such file or directory"s;
+  if(!std::filesystem::exists(ctx.inittab_path)) {
+    Err(ctx) << "no such file or directory: " << ctx.inittab_path;
     return;
   }
 
-  Debug(ctx) << "parsing inittab"s;
-  std::ifstream fs{inittab_path};
+  Debug(ctx) << "parsing inittab";
+  std::ifstream fs{ctx.inittab_path};
   std::string buf;
 
   while(std::getline(fs, buf)) {
     if(buf.empty() || buf.front() == '#') continue;
-    if(std::count(buf.begin(), buf.end(), ':') < 3) {
-      Err(ctx) << "invalid inittab row: "s << buf;
+    auto rng = buf | std::views::split(':');
+    auto row = std::vector<std::string_view>(rng.begin(), rng.end());
+    if(row.size() < 4) {
+      Err(ctx) << "invalid inittab row: " << buf;
+      continue;
     }
 
-    auto&& [id, runlevel, action, process] = [&]{
-      auto split = buf | std::views::split(':');
-      auto head = split | std::views::take(3) | std::views::transform(sv2sv) | to<std::vector>();
-      auto tail = split | std::views::drop(3) | join_with(':') | to<std::vector>();
-      return {head[0], head[1], head[2], tail};
-    }();
+    id = row[0]
   }
 }
